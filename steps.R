@@ -1,18 +1,3 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output:
-  html_document:
-    keep_md: TRUE
----
-##Introduction
-This data analysis utilizes data from a personal activity monitoring device that collects data at 5 minute intervals throughout the day. This data (stored in activity.zip) was collected from October through November 2012 from an anonymous individual.
-
-## Loading and preprocessing the data
-
-Data was extracted from the activity.zip file. The resulting file, activity.csv, contains all the data used for this analysis. The following code was used to read in the data:
-
-```{r readData}
-
 activity_file <- "activity.csv"
 
 if(file.exists(activity_file)) {
@@ -22,105 +7,66 @@ if(file.exists(activity_file)) {
   stop()
 }
 
-summary(activity_data)
-```
-##Histogram of the total number of steps taken each day
-
-
-```{r stepsHistogram}
-
-library("dplyr")
+#Calculate total, mean, and median steps taken per day
 days <- group_by(activity_data, date)
 sum_data <- summarize(days, total_steps = sum(steps), 
    mean_steps = mean(steps), median_steps = median(steps))
-   
+
+#Histogram of total number of steps taken each day
+
+#dev.copy(png, file = "Hist_steps.png")
+
 par(mfrow=c(1,1))
 
 hist(sum_data$total_steps, breaks = 10, main = 
-  "Total Number of Steps", xlab = "Total Steps", 
+  "Histogram of Total Number of Steps", xlab = "Total Number of Steps", 
   xlim = c(0, 25000), ylim = c(0, 20), col = "magenta")
 
-```
+#dev.off()
 
+#Plot time series of 5-minute interval and average number of steps taken across
+#all days
+interval_data <- group_by(activity_data,interval)
+interval_data_ave <- summarize(interval_data, ave_steps = mean(steps, na.rm = TRUE))
 
-## What is mean total number of steps and median taken per day?  
-
-
-```{r meanSteps, results="asis"}
-
-library(xtable)
-xt <- xtable(sum_data)
-print(xt, type = "html")
-
-```
-
-
-## What is the average daily activity pattern?
-
-```{r averageActivity}
-interval_data<-group_by(activity_data,interval)
-interval_data_ave <-summarize(interval_data, ave_steps = mean(steps, na.rm = TRUE))
+#dev.copy(png, file = "Ave_steps.png")
 
 par(mfrow=c(1,1))
 plot(interval_data_ave$interval, interval_data_ave$ave_steps, type = "l",
      main = "Average # of Steps", xlab = "Interval", ylab = "Average Steps",
      col = "cyan")
-```
 
+#dev.off()
 
-## Find maximum 5-minute interval on average across all days that contain the maximum number of steps  
-
-
-```{r maxInterval}
-
+#Find maximum 5-minute interval on average across all days contains the maximum number of steps
 hold_max<-summary(interval_data_ave$ave_steps) #First find the maximum value
 hold_interval<-subset(interval_data_ave, ave_steps > as.numeric(hold_max[6])-1)
-hold_interval <- as.integer(hold_interval)
+hold_interval <- as.integer(hold_integer)
 
-```
-
-**The maximum 5-minute interval is `r hold_interval[2]`.**
-
-## Total number of rows with NAs
-
-```{r NACount}
-
+#Calculate the total number of rows with NAs
 na_percent <- as.integer(mean(is.na(activity_data$steps)) * 100) #Gives percentage
 count_na <- length(which(is.na(activity_data$steps))) #Gives number of NAs in "steps" data
 
-```
-
-**The total number of rows in activity.csv with NAs is `r count_na` or `r na_percent`%.**
-
-
-## Imputing missing values
-
-Impute NAs in "steps" column by replacing with above average calculated across all days for each interval. As you'll see from the histogram, there is no change from the previous histogram with NAs in the data. 
-
-```{r imputedHistogram}
+#Impute NAs in "steps" column by replacing with above average calculated across all days
 
 new_data<-merge(activity_data,interval_data_ave, sort = FALSE)
 new_data <- arrange (new_data, date)
 new_activity_data <- mutate(activity_data, steps = ifelse(is.na(new_data$steps), new_data$ave_steps , new_data$steps))
 
+#Histogram of total number of steps taken each day with new data (no NAs)
 new_days <- group_by(new_activity_data, date)
 new_sum_data <- summarize(new_days, total_steps = sum(steps), 
                       mean_steps = mean(steps), median_steps = median(steps))
+write.table(new_sum_data, file="new_summary.txt")
+
+#dev.copy(png, file = "Hist_steps_clean.png")
 
 par(mfrow=c(1,1))
 hist(new_sum_data$total_steps, breaks = 10, main = 
-       "Total Number of Steps (NAs imputed)", xlab = "Total Number of Steps",
+       "Histogram of Total Number of Steps", xlab = "Total Number of Steps",
        col = "lightblue")
 
-
-```
-
-
-## Are there differences in activity patterns between weekdays and weekends?
-
-The plots below show that there is much more activity on the weekends versus the weekdays.
-
-```{r weekdayVSweekendPlot}
+#dev.off()
 
 #Add new factor variable for "weekday" or "weekend"
 new_activity_data <- mutate(new_activity_data, 
@@ -140,6 +86,8 @@ wend_interval_data_ave <-summarize(wend_interval_data, ave_steps = mean(steps))
 wday_interval_data <- group_by(weekday_activity_data,interval)
 wday_interval_data_ave <-summarize(wday_interval_data, ave_steps = mean(steps))
 
+#dev.copy(png, file = "Ave_steps_clean.png")
+
 par(mfrow = c(2,1), mar = c(4,4,3,3))
 plot(wend_interval_data_ave$interval, wend_interval_data_ave$ave_steps, type = "l", main =
        "Average # of Steps on Weekends", xlab = "Interval", ylab = "Average Steps", col = "blue",
@@ -148,7 +96,5 @@ plot(wend_interval_data_ave$interval, wend_interval_data_ave$ave_steps, type = "
 plot(wday_interval_data_ave$interval, wday_interval_data_ave$ave_steps, type = "l", main =
        "Average # of Steps on Weekdays", xlab = "Interval", ylab = "Average Steps", col = "red",
        font.main = 3, ylim = c(0,200))
-
-
-```
+#dev.off()
 
